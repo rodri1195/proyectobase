@@ -1,0 +1,136 @@
+CONFIG_IDF_TARGET="esp32c3"
+
+# Compiler: debug-friendly (-Og), no asserts, no stack protection, no build-date stamping
+CONFIG_COMPILER_OPTIMIZATION_DEBUG=y
+CONFIG_COMPILER_OPTIMIZATION_ASSERTIONS_DISABLE=y
+CONFIG_COMPILER_STACK_CHECK_MODE_NONE=y
+CONFIG_COMPILER_HIDE_PATHS_MACROS=y
+# CONFIG_COMPILER_CXX_EXCEPTIONS is not set
+# CONFIG_COMPILER_CXX_RTTI is not set
+# CONFIG_COMPILER_WARN_WRITE_STRINGS is not set
+# CONFIG_APP_COMPILE_TIME_DATE is not set
+
+# Bootloader: silent + optimized
+CONFIG_BOOTLOADER_LOG_LEVEL_NONE=y
+CONFIG_BOOTLOADER_COMPILER_OPTIMIZATION_SIZE=y
+# CONFIG_BOOTLOADER_COMPILE_TIME_DATE is not set
+# CONFIG_BOOTLOADER_WDT_ENABLE is not set
+# CONFIG_BOOTLOADER_REGION_PROTECTION_ENABLE is not set
+
+# Logging off (default=NONE, max=equal to default → fully compiled out)
+CONFIG_LOG_DEFAULT_LEVEL_NONE=y
+CONFIG_LOG_MAXIMUM_EQUALS_DEFAULT=y
+
+# Console on USB-Serial-JTAG (board is USB-attached via /dev/ttyACM0)
+# so panic + stdout reach the host over the same USB cable used for flashing.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+# CONFIG_ESP_CONSOLE_UART_DEFAULT is not set
+# CONFIG_ESP_CONSOLE_NONE is not set
+
+# Panic: print register dump + reboot (readable via JTAG after reset)
+CONFIG_ESP_SYSTEM_PANIC_PRINT_REBOOT=y
+# CONFIG_ESP_SYSTEM_PANIC_SILENT_REBOOT is not set
+# CONFIG_ESP_SYSTEM_PANIC_PRINT_HALT is not set
+
+# No debug helpers (gdbstub & coredump are excluded at component level)
+CONFIG_ESP_DEBUG_OCDAWARE=y
+# CONFIG_ESP_ERR_TO_NAME_LOOKUP is not set
+# CONFIG_ESP_SYSTEM_HW_PC_RECORD is not set
+
+# Memory protection (PMS) off - we don't need isolation for a bare-minimum app
+# CONFIG_ESP_SYSTEM_MEMPROT is not set
+
+# libc: skip asm-optimized mem/str routines (smaller C paths, less to build)
+# CONFIG_LIBC_OPTIMIZED_MISALIGNED_ACCESS is not set
+
+# Watchdogs fully off (app + bootloader + stack guard)
+# CONFIG_ESP_TASK_WDT_EN is not set
+# CONFIG_ESP_INT_WDT is not set
+# CONFIG_ESP_SYSTEM_HW_STACK_GUARD is not set
+
+# Brownout detector off (+ drop XMC-brownout-reset flash patch since brownout is off)
+# CONFIG_ESP_BROWNOUT_DET is not set
+# CONFIG_SPI_FLASH_BROWNOUT_RESET_XMC is not set
+
+# SPI flash: board has embedded XMC 4MB (XMC support is always-on in SoC caps).
+# Disable detection code for every other vendor's chip-specific quirks.
+# CONFIG_SPI_FLASH_SUPPORT_ISSI_CHIP is not set
+# CONFIG_SPI_FLASH_SUPPORT_MXIC_CHIP is not set
+# CONFIG_SPI_FLASH_SUPPORT_GD_CHIP is not set
+# CONFIG_SPI_FLASH_SUPPORT_WINBOND_CHIP is not set
+# CONFIG_SPI_FLASH_SUPPORT_BOYA_CHIP is not set
+# CONFIG_SPI_FLASH_SUPPORT_TH_CHIP is not set
+
+# Heap: no poisoning, no tracing
+CONFIG_HEAP_POISONING_DISABLED=y
+CONFIG_HEAP_TRACING_OFF=y
+
+# libc: IDF v6 default is picolibc (smaller + faster to compile than newlib).
+# Also drop the newlib-compat shim since we don't link newlib-built libs.
+# CONFIG_LIBC_PICOLIBC_NEWLIB_COMPATIBILITY is not set
+
+# FreeRTOS: trim features
+# CONFIG_FREERTOS_USE_TIMERS is not set
+# CONFIG_FREERTOS_USE_TRACE_FACILITY is not set
+# CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS is not set
+# CONFIG_FREERTOS_INTERRUPT_BACKTRACE is not set
+CONFIG_FREERTOS_CHECK_STACKOVERFLOW_NONE=y
+# CONFIG_FREERTOS_TASK_FUNCTION_WRAPPER is not set
+# CONFIG_FREERTOS_CHECK_MUTEX_GIVEN_BY_OWNER is not set
+# CONFIG_FREERTOS_TLSP_DELETION_CALLBACKS is not set
+
+# mbedTLS: only SHA256 is reachable (bootloader app-integrity check).
+# All other TLS/SSL/X509/PK/ECP/PKCS/cipher symbols are hidden by Kconfig
+# once TLS is off, so listing them here has no effect.
+# CONFIG_MBEDTLS_TLS_ENABLED is not set
+# CONFIG_MBEDTLS_X509_USE_C is not set
+# CONFIG_MBEDTLS_X509_CRL_PARSE_C is not set
+# CONFIG_MBEDTLS_X509_CSR_PARSE_C is not set
+# CONFIG_MBEDTLS_PEM_PARSE_C is not set
+# CONFIG_MBEDTLS_PEM_WRITE_C is not set
+# CONFIG_MBEDTLS_CERTIFICATE_BUNDLE is not set
+# CONFIG_MBEDTLS_THREADING_C is not set
+# CONFIG_MBEDTLS_SELF_TEST is not set
+# CONFIG_MBEDTLS_ERROR_STRINGS is not set
+# CONFIG_MBEDTLS_VERSION_C is not set
+# CONFIG_MBEDTLS_HAVE_TIME is not set
+# CONFIG_MBEDTLS_ASYMMETRIC_CONTENT_LEN is not set
+
+# mbedTLS ciphers off (no AES/DES/Camellia/ARIA/Chacha)
+# CONFIG_MBEDTLS_AES_C is not set
+# CONFIG_MBEDTLS_DES_C is not set
+# CONFIG_MBEDTLS_CAMELLIA_C is not set
+# CONFIG_MBEDTLS_ARIA_C is not set
+# CONFIG_MBEDTLS_CHACHA20_C is not set
+
+# mbedTLS PK/ECC/RSA off (bootloader_support does its own SHA256 via hal)
+# CONFIG_MBEDTLS_RSA_C is not set
+# CONFIG_MBEDTLS_ECP_C is not set
+# CONFIG_MBEDTLS_PKCS5_C is not set
+# CONFIG_MBEDTLS_HMAC_DRBG_C is not set
+
+# With RSA/ECDSA/DHM off, these are no longer needed
+# CONFIG_MBEDTLS_BIGNUM_C is not set
+# CONFIG_MBEDTLS_ASN1_PARSE_C is not set
+# CONFIG_MBEDTLS_ASN1_WRITE_C is not set
+
+# mbedTLS hashes: only SHA256 (needed for bootloader app integrity check)
+# CONFIG_MBEDTLS_MD5_C is not set
+# CONFIG_MBEDTLS_SHA1_C is not set
+# CONFIG_MBEDTLS_SHA224_C is not set
+CONFIG_MBEDTLS_SHA256_C=y
+# CONFIG_MBEDTLS_SHA384_C is not set
+# CONFIG_MBEDTLS_SHA512_C is not set
+# CONFIG_MBEDTLS_SHA3_C is not set
+# CONFIG_MBEDTLS_RIPEMD160_C is not set
+
+# HW crypto accelerators off (no crypto use anyway)
+# CONFIG_MBEDTLS_HARDWARE_AES is not set
+# CONFIG_MBEDTLS_HARDWARE_SHA is not set
+# CONFIG_MBEDTLS_HARDWARE_RSA_DS_PERIPHERAL is not set
+
+# Secure boot / flash encryption off (make it explicit)
+# CONFIG_SECURE_BOOT is not set
+# CONFIG_SECURE_FLASH_ENC_ENABLED is not set
+# CONFIG_SECURE_SIGNED_APPS_NO_SECURE_BOOT is not set
+# CONFIG_SPI_FLASH_ENABLE_ENCRYPTED_READ_WRITE is not set

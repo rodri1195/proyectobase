@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "eclipse-cdt.memory-inspector",
+    "ismaelgfk.riscv-sense",
+    "espressif.esp-idf-extension"
+  ]
+}
