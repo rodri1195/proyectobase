@@ -1,12 +1,17 @@
 {
   "C_Cpp.intelliSenseEngine": "default",
-  "idf.openOcdConfigs": ["board/esp32c3-builtin.cfg"],
-  "idf.port": "/dev/ttyACM0",
-  "idf.currentSetup": "${env:HOME}/.espressif/v6.0/esp-idf",
+  "idf.openOcdConfigs": [
+    "board/esp32c3-builtin.cfg"
+  ],
+  "idf.port": "/dev/ttyS0",
+  "idf.currentSetup": "/home/osboxes/.espressif/v6.0/esp-idf",
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32c3"
   },
-  "idf.openOcdLaunchArgs": ["-f", "board/esp32c3-builtin.cfg"],
+  "idf.openOcdLaunchArgs": [
+    "-f",
+    "board/esp32c3-builtin.cfg"
+  ],
   "idf.svdFilePath": "${workspaceFolder}/.vscode/esp32c3.svd",
   "idf.flashType": "JTAG",
   "debug.allowBreakpointsEverywhere": true,
