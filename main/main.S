@@ -1,6 +1,6 @@
 .data
 str_hola:
-        .string "Hola Mundo RISC-V!\n"
+        .string " RISC-V!\n"
 .text
 .global app_main
 
@@ -16,4 +16,3 @@ app_loop:
         call    led_set
 
         j       app_loop
-##HOLA
