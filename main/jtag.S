@@ -21,6 +21,6 @@ free_loop:
         j       free_loop
 
 force_send:
-        la      t1, USB_SERIAL_JTAG_WR_DONE
+        li      t1, USB_SERIAL_JTAG_WR_DONE
         sw      t1, (t0)
         ret
