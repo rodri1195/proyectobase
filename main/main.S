@@ -5,6 +5,7 @@ str_hola:
 .global app_main
 
 app_main:
+        call    oled_test
         call    led_setup
         call    boton_setup
 
