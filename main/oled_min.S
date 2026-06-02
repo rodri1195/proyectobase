@@ -20,6 +20,21 @@
 oled_test:
         call    oled_gpio_setup
         call    oled_reset
+
+        li      a0, 0xAE                # Display OFF
+        call    oled_cmd
+
+        li      a0, 0x8D                # Charge Pump Setting
+        call    oled_cmd
+
+        li      a0, 0x14                # Enable Charge Pump
+        call    oled_cmd
+
+        li      a0, 0xA5                # All pixels ON
+        call    oled_cmd
+
+        li      a0, 0xAF                # Display ON
+        call    oled_cmd
         ret
 
 oled_gpio_setup:
@@ -126,3 +141,36 @@ spi_clock:
         lw      s0, 4(sp)
         addi    sp, sp, 8
         ret
+
+oled_cmd:
+        addi    sp,sp,-8
+        sw      ra,0(sp)
+        sw      s0,4(sp)
+
+        mv      s0, a0                  # Guardar comando en s0
+
+#DC=LOW-> comando
+
+        li      t0, GPIO_OUT_W1TC
+        li      t1, PIN_DC
+        sw      t1, 0(t0)               # DC en bajo
+
+#CS=LOW->SELECCIONAR PANTALLA
+        li      t0, GPIO_OUT_W1TC
+        li      t1, PIN_CS
+        sw      t1, 0(t0)               # CS en bajo
+
+#Enviar el byte por spi manual
+        mv      a0, s0
+        call    spi_send_byte
+
+#CS=HIGH->DESELECCIONAR PANTALLA
+        li      t0, GPIO_OUT_W1TS
+        li      t1, PIN_CS
+        sw      t1, 0(t0)               # CS en alto
+
+        lw      ra,0(sp)
+        lw      s0,4(sp)
+        addi    sp,sp,8
+        ret
+
