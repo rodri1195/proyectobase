@@ -12,7 +12,7 @@ app_main:
         call    jtag_send
 
         call    oled_test
-
+        
         la      a0, str_chau
         call    jtag_send
 
