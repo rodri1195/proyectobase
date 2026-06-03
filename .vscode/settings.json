@@ -33,5 +33,11 @@
     "statusBar.debuggingForeground": "#FFFAFA",
     "statusBar.noFolderBackground": "#740808",
     "statusBar.noFolderForeground": "#FFFAFA"
-  }
+  },
+  "clangd.path": "/home/osboxes/.espressif/tools/esp-clang/esp-20.1.1_20250829/esp-clang/bin/clangd",
+  "clangd.arguments": [
+    "--background-index",
+    "--query-driver=**",
+    "--compile-commands-dir=/home/osboxes/proyectoMipsGithub/proyectobase/build"
+  ]
 }
