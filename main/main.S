@@ -7,23 +7,14 @@ str_chau:
 .text
 .global app_main
 
+.text
+.global app_main
+ 
 app_main:
-        la      a0, str_hola
-        call    jtag_send
-
-        call    oled_test
-        
-        la      a0, str_chau
-        call    jtag_send
-
-        call    led_setup
-        call    boton_setup
-
-app_loop:
-        la      a0, str_hola
-        call    jtag_send
-
-        call    boton_read
-        call    led_set
-
-        j       app_loop
+        call    oled_init               # 1) display listo
+        call    menu_main               # 2) arranca el menu (no retorna)
+ 
+# menu_main no retorna nunca; si por algun motivo lo hiciera,
+# caemos en un lazo seguro para no ejecutar memoria basura.
+hang:
+        j       hang
