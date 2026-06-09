@@ -6,6 +6,11 @@ str_oled_test:
 .text
 .global oled_test
 .global oled_init
+.global oled_cmd
+.global oled_data
+.global oled_reset
+.global oled_gpio_setup
+.global delay
 
 # ---- Mapeo de pines (bit en GPIO_OUT) ----
         .equ    PIN_RES,  0x08          # GPIO3

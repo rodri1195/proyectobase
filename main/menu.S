@@ -9,6 +9,13 @@
 #    oled_cmd, oled_data, oled_gpio_setup, oled_reset, delay
 # =====================================================================
 
+# Rutinas definidas en oled_min.s (compilacion separada).
+# .extern documenta que estos simbolos viven en otro objeto; el linker
+# los resuelve siempre que oled_min.s los exporte con .global.
+.extern oled_cmd
+.extern oled_data
+.extern delay
+
 .data
 # ---- Fuente 5x8: cada letra son 5 bytes (columnas verticales) ----
 # bit0 = fila de arriba, bit7 = fila de abajo (formato pagina SSD1306)
