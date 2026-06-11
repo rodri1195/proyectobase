@@ -154,27 +154,62 @@ rng_mod100:
         ret
 
 # =====================================================================
-#  juego_loop: bucle principal del modo de prueba.
-#    - dibuja el tablero
-#    - lee botones, mueve al jugador si la casilla destino es transitable
-#    - CONFIRMAR sale del modo (vuelve al menu)
+#  systimer_read: devuelve en a0 los 32 bits bajos del contador UNIT0.
+#  Flujo segun el TRM:
+#    1) escribir 1 al bit UPDATE en OP_REG -> pide congelar el valor
+#    2) esperar a que el bit VALUE_VALID en OP_REG sea 1 -> captura lista
+#    3) leer VALUE_LO_REG
+#  Para medir 150ms (2.4M ticks) alcanzan los 32 bits bajos.
+# =====================================================================
+systimer_read:
+# 1) pedir update
+        li      t0, SYSTIMER_UNIT0_OP_REG
+        li      t1, SYSTIMER_UNIT0_UPDATE_MASK
+        sw      t1, 0(t0)
+
+# 2) esperar VALUE_VALID
+        li      t2, SYSTIMER_UNIT0_VALUE_VALID_MASK
+sr_wait:
+        lw      t3, 0(t0)
+        and     t4, t3, t2
+        beqz    t4, sr_wait
+
+# 3) leer valor bajo
+        li      t0, SYSTIMER_UNIT0_VALUE_LO_REG
+        lw      a0, 0(t0)
+        ret
+
+# =====================================================================
+#  Estructura de CADA frame (objetivo ~150ms):
+#    1) dibujar el tablero
+#    2) leer botones UNA vez
+#    3) procesar UN solo movimiento (o salir con CONFIRMAR)
+#    4) esperar hasta completar los ~150ms del frame
+#  Como el frame dura 150ms y solo se mueve una vez por frame:
+#    - un toque rapido -> un movimiento
+#    - mantener apretado -> un paso por frame (repeticion jugable)
 # =====================================================================
 juego_loop:
-        addi    sp, sp, -4
+        addi    sp, sp, -8
         sw      ra, 0(sp)
+        sw      s0, 4(sp)               # s0 = marca de tiempo de inicio del frame
 
 jl_frame:
-        call    board_draw              # dibuja tablero + jugador y vuelca
+# marca de tiempo al INICIO del frame
+        call    systimer_read
+        mv      s0, a0                  # s0 = t_inicio
 
+# --- 1) dibujar ---
+        call    board_draw
+
+# --- 2) leer botones (una sola lectura por frame) ---
         call    boton_leer              # a0 = botones apretados
 
-# CONFIRMAR -> salir
+# --- 3) procesar un movimiento ---
         li      t0, BTN_CONFIRM
         and     t1, a0, t0
         bnez    t1, jl_exit
 
-# Determinar desplazamiento (dx, dy) segun el boton
-# Solo se procesa un movimiento por iteracion (prioridad arriba->abajo->izq->der)
         li      t2, 0                   # dx
         li      t3, 0                   # dy
 
@@ -198,25 +233,32 @@ jl_chk_left:
 jl_chk_right:
         li      t0, BTN_RIGHT
         and     t1, a0, t0
-        beqz    t1, jl_delay
+        beqz    t1, jl_wait
         li      t2, 1
 
 jl_move:
-# intentar mover al jugador por (dx=t2, dy=t3)
         mv      a0, t2
         mv      a1, t3
         call    player_try_move
 
-jl_delay:
-        li      a0, 600000              # ritmo de repeticion / anti-rebote
-        call    delay
+jl_wait:
+# --- 4) esperar hasta completar 150ms DESDE t_inicio ---
+# Como medimos desde el inicio, el frame dura 150ms reales
+# incluyendo lo que tardo el render. Esto mantiene todas las
+# consolas sincronizadas.
+# La resta (t_ahora - t_inicio) funciona aun si el contador
+# desborda los 32 bits, por aritmetica modular sin signo.
+        call    systimer_read           # a0 = t_ahora
+        sub     t0, a0, s0              # t0 = ticks transcurridos
+        li      t1, FRAME_TICKS
+        bltu    t0, t1, jl_wait         # si falta, seguir esperando
+
         j       jl_frame
 
 jl_exit:
-        li      a0, 600000
-        call    delay                   # anti-rebote al salir
         lw      ra, 0(sp)
-        addi    sp, sp, 4
+        lw      s0, 4(sp)
+        addi    sp, sp, 8
         ret
 
 # =====================================================================
