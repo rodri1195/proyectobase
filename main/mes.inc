@@ -29,6 +29,15 @@
 #define CELL_BOX     2       // caja destruible (C)
 #define CELL_P1      3       // jugador 1 (X)
 #define CELL_P2      4       // jugador 2 (O)
+#define CELL_BOMB    5       // bomba (B)
+#define CELL_FIRE    6       // fuego/explosion (muestra cuenta 6..1)
+#define CELL_POWERUP 7       // power up (+)
+
+// ---- Parametros de juego ----
+#define BOMB_FRAMES  20      // frames hasta que la bomba explota
+#define FIRE_FRAMES  6       // frames que dura el fuego (cuenta 6..1)
+#define MAX_BOMBS    5       // maximo de bombas simultaneas por jugador
+#define BOARD_CELLS  91      // 13*7
 
 // ---- Temporizacion ----
 // Frame objetivo: 150ms EXACTOS, requerido para sincronizar con otras MES
@@ -57,4 +66,3 @@
 // Nota: el contador UNIT0 ya viene HABILITADO por el bootloader de ESP-IDF
 // (lo usa esp_timer), asi que no hace falta configurar WORK_EN. El frame
 // solo LEE el contador, nunca lo configura.
-
