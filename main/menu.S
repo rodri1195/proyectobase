@@ -19,6 +19,7 @@
 .extern oled_data
 .extern delay
 .extern juego_prueba
+.extern juego_online
 
 .data
 # ---- Fuente 5x8: cada letra son 5 bytes (columnas verticales) ----
@@ -106,8 +107,8 @@ modo_prueba:
         call    juego_prueba            # arranca el modo de prueba
         j       menu_main               # al salir del juego, vuelve al menu
 modo_online:
-# TODO: modo online (usara el mismo tablero)
-        j       menu_main
+        call    juego_online            # arranca el modo online
+        j       menu_main               # al salir del juego, vuelve al menu        
 
 # =====================================================================
 #  botones_setup: GPIO0, GPIO1, GPIO10 como entrada con pull-up

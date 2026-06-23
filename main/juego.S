@@ -1,12 +1,12 @@
 #include "mes.inc"
-# =====================================================================
+# \=====================================================================
 #  juego.s - Modo de PRUEBA del MES (Bomberman)
 #  Tablero 13x7, casillas 9x9. Un jugador movible (P1) + P2 inmovil.
 #
 #  Sistema de bombas y explosiones:
 #   - boton central coloca bomba (rango congelado al colocar)
 #   - bomba: 20 frames -> explota
-#   - explosion: radio = rango de la bomba; rompe cajas, destruye powerups
+#   - explosion: radio \= rango de la bomba; rompe cajas, destruye powerups
 #     (sin detenerse), cadena con otras bombas en el mismo frame
 #   - fuego: 6 frames, muestra cuenta 6..1
 #   - caja rota: 30% -> powerup
@@ -17,11 +17,11 @@
 #    5 deteccion de muerte  6 render
 #
 #  Estado por casilla (arrays paralelos de BOARD_CELLS bytes/words):
-#    board[i]  : codigo de casilla
-#    btimer[i] : frames restantes (bomba o fuego)
-#    brange[i] : rango congelado de la bomba en esa casilla
-#    bowner[i] : dueno de la bomba (0=P1, 1=P2, -1=ninguno)
-# =====================================================================
+#    board\[i\]  : codigo de casilla
+#    btimer\[i\] : frames restantes (bomba o fuego)
+#    brange\[i\] : rango congelado de la bomba en esa casilla
+#    bowner\[i\] : dueno de la bomba (0=P1, 1=P2, -1=ninguno)
+# \=====================================================================
 
 .extern botones_setup
 .extern boton_leer
@@ -44,9 +44,14 @@ p1_placed: .word 0
 p1_range: .word 1
 p1_alive: .word 1
 
-# ---- Jugador 2 (inmovil en modo prueba) ----
+# ---- Jugador 2 ----
+# En modo prueba: solo se usan x,y,alive (queda inmovil, no pone bombas).
+# En modo online: se usan todas, igual que P1.
 p2_x:   .word   12
 p2_y:   .word   6
+p2_maxbombs: .word 1
+p2_placed: .word 0
+p2_range: .word 1
 p2_alive: .word 1
 
 # ---- Flag de fin de juego ----
@@ -54,10 +59,42 @@ game_over: .word 0
 
 .text
 .global juego_prueba
+# ---- Reusables por online.s ----
+.global state_init
+.global board_generate
+.global wait_confirm_release
+.global tick_fire
+.global tick_bombs
+.global check_death
+.global board_draw
+.global p1_try_move
+.global p1_place_bomb
+.global explode_at
+.global pending_push
+.global rng_mod
+.global systimer_read
+# datos compartidos
+.global board
+.global btimer
+.global brange
+.global bowner
+.global p1_x
+.global p1_y
+.global p1_maxbombs
+.global p1_placed
+.global p1_range
+.global p1_alive
+.global p2_x
+.global p2_y
+.global p2_maxbombs
+.global p2_placed
+.global p2_range
+.global p2_alive
+.global game_over
 
-# =====================================================================
+# \=====================================================================
 #  juego_prueba: punto de entrada del modo de prueba.
-# =====================================================================
+# \=====================================================================
 juego_prueba:
         addi    sp, sp, -4
         sw      ra, 0(sp)
@@ -72,24 +109,24 @@ juego_prueba:
         addi    sp, sp, 4
         ret
 
-# =====================================================================
+# \=====================================================================
 #  wait_confirm_release: espera a que el boton CONFIRM (central) este
 #  liberado. Evita que el apreton que selecciono "PRUEBA" en el menu se
 #  lea como "poner bomba" en el primer frame del juego.
-#  Lee GPIO_IN directamente: con pull-up, el bit en 1 = suelto.
-# =====================================================================
+#  Lee GPIO_IN directamente: con pull-up, el bit en 1 \= suelto.
+# \=====================================================================
 wait_confirm_release:
         li      t0, GPIO_IN_REG
         li      t1, BTN_CONFIRM
 wcr_loop:
         lw      t2, 0(t0)
         and     t3, t2, t1
-        beqz    t3, wcr_loop            # bit en 0 = apretado -> seguir esperando
+        beqz    t3, wcr_loop            # bit en 0 \= apretado -> seguir esperando
         ret
 
-# =====================================================================
+# \=====================================================================
 #  state_init: inicializa variables de jugadores y flags.
-# =====================================================================
+# \=====================================================================
 state_init:
         la      t0, p1_x
         sw      zero, 0(t0)
@@ -115,15 +152,24 @@ state_init:
         la      t0, p2_alive
         sw      t1, 0(t0)
 
+# ---- campos de bombas de P2 (relevantes en online) ----
+        li      t1, 1
+        la      t0, p2_maxbombs
+        sw      t1, 0(t0)
+        la      t0, p2_placed
+        sw      zero, 0(t0)
+        la      t0, p2_range
+        sw      t1, 0(t0)
+
         la      t0, game_over
         sw      zero, 0(t0)
         ret
 
-# =====================================================================
+# \=====================================================================
 #  board_generate: tablero inicial. Paredes en impares, 70% cajas,
 #  P1 en (0,0) con (1,0)/(0,1) libres, P2 en (12,6) con vecinas libres.
 #  Limpia los arrays btimer/brange/bowner.
-# =====================================================================
+# \=====================================================================
 board_generate:
         addi    sp, sp, -16
         sw      ra, 0(sp)
@@ -140,7 +186,7 @@ bg_clr:
         sb      zero, 0(t0)
         sb      zero, 0(t1)
         li      t4, 255
-        sb      t4, 0(t2)               # bowner = 255 (ninguno)
+        sb      t4, 0(t2)               # bowner \= 255 (ninguno)
         addi    t0, t0, 1
         addi    t1, t1, 1
         addi    t2, t2, 1
@@ -207,17 +253,17 @@ bg_next:
         sb      t1, 0(t3)
 
 # zona P2 (12,6),(11,6),(12,5)
-# indice (12,6) = 6*13+12 = 90
+# indice (12,6) \= 6*13+12 \= 90
         li      t1, CELL_P2
         li      t2, 90
         add     t3, t0, t2
         sb      t1, 0(t3)
         li      t1, CELL_EMPTY
-# (11,6) = 89
+# (11,6) \= 89
         li      t2, 89
         add     t3, t0, t2
         sb      t1, 0(t3)
-# (12,5) = 5*13+12 = 77
+# (12,5) \= 5*13+12 \= 77
         li      t2, 77
         add     t3, t0, t2
         sb      t1, 0(t3)
@@ -229,9 +275,9 @@ bg_next:
         addi    sp, sp, 16
         ret
 
-# =====================================================================
-#  rng_mod100: a0 = valor 0..99 del RNG de hardware.
-# =====================================================================
+# \=====================================================================
+#  rng_mod100: a0 \= valor 0..99 del RNG de hardware.
+# \=====================================================================
 rng_mod100:
         li      t0, RNG_DATA_REG
         lw      t1, 0(t0)
@@ -239,9 +285,9 @@ rng_mod100:
         remu    a0, t1, t2
         ret
 
-# =====================================================================
-#  rng_mod(a0=n): a0 = valor 0..n-1 del RNG.
-# =====================================================================
+# \=====================================================================
+#  rng_mod(a0=n): a0 \= valor 0..n-1 del RNG.
+# \=====================================================================
 rng_mod:
         mv      t3, a0
         li      t0, RNG_DATA_REG
@@ -249,9 +295,9 @@ rng_mod:
         remu    a0, t1, t3
         ret
 
-# =====================================================================
-#  systimer_read: a0 = 32 bits bajos del contador UNIT0 (16MHz).
-# =====================================================================
+# \=====================================================================
+#  systimer_read: a0 \= 32 bits bajos del contador UNIT0 (16MHz).
+# \=====================================================================
 systimer_read:
         li      t0, SYSTIMER_UNIT0_OP_REG
         li      t1, SYSTIMER_UNIT0_UPDATE_MASK
@@ -265,10 +311,10 @@ sr_wait:
         lw      a0, 0(t0)
         ret
 
-# =====================================================================
+# \=====================================================================
 #  juego_loop: bucle principal. Cada frame dura FRAME_TICKS (150ms).
 #  Orden: entradas, movimiento, tick bombas, propagacion, muerte, render.
-# =====================================================================
+# \=====================================================================
 juego_loop:
         addi    sp, sp, -8
         sw      ra, 0(sp)
@@ -279,7 +325,7 @@ jl_frame:
         mv      s0, a0
 
 # --- 1 entradas ---
-        call    boton_leer              # a0 = botones apretados
+        call    boton_leer              # a0 \= botones apretados
 
 # --- 2 movimiento/accion ---
         call    handle_input            # usa a0 (botones) directamente
@@ -312,16 +358,16 @@ jl_gameover:
         addi    sp, sp, 8
         ret
 
-# =====================================================================
+# \=====================================================================
 #  handle_input(a0=botones): mueve a P1 y/o coloca bomba.
 #  Movimiento: un paso por frame (prioridad U>D>L>R).
 #  Bomba: si CONFIRMAR... (no, CONFIRMAR sale). El boton de bomba es
 #  BTN_CONFIRM? No: en el menu era confirmar. Aqui CONFIRMAR=salir.
-#  Bomba = boton central. Segun el mapeo, el "central" es GPIO10=CONFIRM.
+#  Bomba \= boton central. Segun el mapeo, el "central" es GPIO10=CONFIRM.
 #  Para no chocar: usamos CONFIRM=colocar bomba en el juego, y para SALIR
 #  se mantiene... -> ver nota. Aqui: el boton central (CONFIRM) coloca
 #  bomba; no hay "salir" desde el juego salvo game over.
-# =====================================================================
+# \=====================================================================
 handle_input:
         addi    sp, sp, -8
         sw      ra, 0(sp)
@@ -375,11 +421,11 @@ hi_ret:
         addi    sp, sp, 8
         ret
 
-# =====================================================================
+# \=====================================================================
 #  p1_place_bomb: coloca una bomba en la casilla de P1 si no supera su
 #  maximo ni MAX_BOMBS, y si la casilla no tiene ya una bomba.
 #  Congela el rango actual del jugador en la bomba.
-# =====================================================================
+# \=====================================================================
 p1_place_bomb:
         addi    sp, sp, -4
         sw      ra, 0(sp)
@@ -420,7 +466,7 @@ p1_place_bomb:
         la      t0, p1_range
         lw      t2, 0(t0)
         sb      t2, 0(t1)
-# dueno = 0 (P1)
+# dueno \= 0 (P1)
         la      t1, bowner
         add     t1, t1, t6
         sb      zero, 0(t1)
@@ -436,11 +482,11 @@ pb_no:
         addi    sp, sp, 4
         ret
 
-# =====================================================================
+# \=====================================================================
 #  p1_try_move(dx=a0, dy=a1): mueve a P1 si la casilla destino es
 #  transitable. Transitable: EMPTY o POWERUP (lo recoge). Bomba, pared,
 #  caja bloquean. Al recoger powerup: +1 maxbombs (hasta 5), +1 range.
-# =====================================================================
+# \=====================================================================
 p1_try_move:
         addi    sp, sp, -16
         sw      ra, 0(sp)
@@ -526,12 +572,12 @@ ptm_no:
         addi    sp, sp, 16
         ret
 
-# =====================================================================
+# \=====================================================================
 #  tick_fire: decrementa el timer de cada casilla de fuego. Las que
 #  llegan a 0 vuelven a EMPTY. Se llama al INICIO del tick, antes de
 #  generar fuego nuevo, para que el fuego nuevo dure 6 frames completos.
 #  Funcion hoja: usa solo registros temporales (no toca la pila).
-# =====================================================================
+# \=====================================================================
 tick_fire:
         la      t0, board
         la      t1, btimer
@@ -553,11 +599,11 @@ tf_next:
         bnez    t2, tf_loop
         ret
 
-# =====================================================================
+# \=====================================================================
 #  tick_bombs: decrementa el timer de cada bomba. Recolecta las que
 #  llegan a 0 y las hace explotar (con cadena en el mismo frame).
 #  Usa una pila de "pendientes" en memoria (pending_stack).
-# =====================================================================
+# \=====================================================================
 .data
         .align  2
 pending_stack: .space 364               # hasta 91 bombas * 4 bytes
@@ -607,12 +653,12 @@ tb_scan_next:
         bnez    t0, tb_scan
 
 # procesar la pila de pendientes (puede crecer por cadenas)
-        li      s0, 0                   # i = 0
+        li      s0, 0                   # i \= 0
 tb_proc:
         la      t0, pending_count
         lw      t1, 0(t0)
         bge     s0, t1, tb_done         # i >= count -> fin
-# leer pending_stack[i]
+# leer pending_stack\[i\]
         la      t0, pending_stack
         slli    t2, s0, 2
         add     t0, t0, t2
@@ -626,7 +672,7 @@ tb_proc:
         addi    sp, sp, -8
         sw      s0, 0(sp)
         sw      ra, 4(sp)
-        call    explode_at              # a0 = indice
+        call    explode_at              # a0 \= indice
         lw      s0, 0(sp)
         lw      ra, 4(sp)
         addi    sp, sp, 8
@@ -667,11 +713,11 @@ pp_add:
 pp_done:
         ret
 
-# =====================================================================
+# \=====================================================================
 #  explode_at(a0=indice): convierte la bomba en fuego y propaga en las
 #  4 direcciones hasta su rango. Maneja cajas, powerups, cadenas.
 #  Decrementa p_placed del dueno.
-# =====================================================================
+# \=====================================================================
 explode_at:
         addi    sp, sp, -28
         sw      ra, 0(sp)
@@ -683,7 +729,7 @@ explode_at:
         sw      s5, 24(sp)              # iterador paso
         mv      s0, a0
 
-# bx = indice % COLS ; by = indice / COLS
+# bx \= indice % COLS ; by \= indice / COLS
         li      t0, BOARD_COLS
         remu    s1, s0, t0
         divu    s2, s0, t0
@@ -699,11 +745,17 @@ explode_at:
         lbu     t1, 0(t0)
         li      t2, 255
         beq     t1, t2, ea_nodueno
-# solo P1 tiene contador en este modo (dueno 0)
+# liberar el slot del dueno: bowner==0 -> P1, bowner==1 -> P2
         beqz    t1, ea_libera_p1
+        li      t2, 1
+        beq     t1, t2, ea_libera_p2
         j       ea_nodueno
 ea_libera_p1:
         la      t3, p1_placed
+        j       ea_libera_do
+ea_libera_p2:
+        la      t3, p2_placed
+ea_libera_do:
         lw      t4, 0(t3)
         addi    t4, t4, -1
         bgez    t4, ea_store_placed
@@ -759,15 +811,15 @@ ea_have_dir:
         sw      t0, 0(sp)               # dx
         sw      t1, 4(sp)               # dy
 
-        li      s5, 1                   # paso = 1
+        li      s5, 1                   # paso \= 1
 ea_step:
         bgt     s5, s3, ea_dir_done     # paso > rango -> fin de esta direccion
         lw      t0, 0(sp)               # dx
         lw      t1, 4(sp)               # dy
         mul     t2, t0, s5              # dx*paso
         mul     t3, t1, s5              # dy*paso
-        add     t4, s1, t2              # nx = bx + dx*paso
-        add     t5, s2, t3              # ny = by + dy*paso
+        add     t4, s1, t2              # nx \= bx + dx*paso
+        add     t5, s2, t3              # ny \= by + dy*paso
 # limites
         bltz    t4, ea_dir_done
         li      t6, BOARD_COLS
@@ -859,7 +911,7 @@ destroy_box:
         mv      s0, a0                  # indice
 
         li      a0, 100
-        call    rng_mod                 # a0 = 0..99
+        call    rng_mod                 # a0 \= 0..99
         li      t0, 30
         bge     a0, t0, db_fire
 
@@ -889,10 +941,10 @@ db_done:
         addi    sp, sp, 8
         ret
 
-# =====================================================================
+# \=====================================================================
 #  check_death: si un jugador esta sobre una casilla de fuego, muere y
 #  se activa game_over.
-# =====================================================================
+# \=====================================================================
 check_death:
 # P1
         la      t0, p1_alive
@@ -941,15 +993,15 @@ cd_p2:
 cd_ret:
         ret
 
-# =====================================================================
+# \=====================================================================
 #  board_draw: dibuja el tablero completo (doble buffer).
-# =====================================================================
+# \=====================================================================
 board_draw:
         addi    sp, sp, -20
         sw      ra, 0(sp)
         sw      s0, 4(sp)               # y
         sw      s1, 8(sp)               # x
-        sw      s2, 12(sp)              # &board
+        sw      s2, 12(sp)              # \&board
         sw      s3, 16(sp)              # codigo
 
         call    fb_clear
@@ -965,7 +1017,7 @@ bd_col:
         add     t1, s2, t0
         lbu     s3, 0(t1)
 
-# px = OFF_X + x*CELL_PX ; py = OFF_Y + y*CELL_PX
+# px \= OFF_X + x*CELL_PX ; py \= OFF_Y + y*CELL_PX
         li      t2, CELL_PX
         mul     t2, s1, t2
         addi    t2, t2, BOARD_OFF_X
@@ -1019,10 +1071,10 @@ bd_call:
         addi    sp, sp, 20
         ret
 
-# =====================================================================
+# \=====================================================================
 #  draw_sprite(px=a0, py=a1, code=a2, fire_timer=a3): dibuja el sprite
 #  de una casilla 9x9 en el framebuffer.
-# =====================================================================
+# \=====================================================================
 draw_sprite:
         addi    sp, sp, -28
         sw      ra, 0(sp)
@@ -1236,7 +1288,7 @@ draw_digit:
         mv      s0, a0
         mv      s1, a1
 
-# puntero = digit_font + d*5
+# puntero \= digit_font + d*5
         la      t0, digit_font
         li      t1, 5
         mul     t1, a2, t1
@@ -1252,9 +1304,9 @@ dd_bit:
         srl     t6, s4, t5
         andi    t6, t6, 1
         beqz    t6, dd_bit_next
-        addi    a0, s0, 2               # x = px + 2 + col
+        addi    a0, s0, 2               # x \= px + 2 + col
         add     a0, a0, s3
-        addi    a1, s1, 1               # y = py + 1 + bit
+        addi    a1, s1, 1               # y \= py + 1 + bit
         add     a1, a1, t5
         addi    sp, sp, -16
         sw      t5, 0(sp)
