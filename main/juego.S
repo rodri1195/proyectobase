@@ -63,12 +63,28 @@ juego_prueba:
         sw      ra, 0(sp)
 
         call    botones_setup
+        call    wait_confirm_release    # consumir el apreton del menu
         call    state_init
         call    board_generate
         call    juego_loop
 
         lw      ra, 0(sp)
         addi    sp, sp, 4
+        ret
+
+# =====================================================================
+#  wait_confirm_release: espera a que el boton CONFIRM (central) este
+#  liberado. Evita que el apreton que selecciono "PRUEBA" en el menu se
+#  lea como "poner bomba" en el primer frame del juego.
+#  Lee GPIO_IN directamente: con pull-up, el bit en 1 = suelto.
+# =====================================================================
+wait_confirm_release:
+        li      t0, GPIO_IN_REG
+        li      t1, BTN_CONFIRM
+wcr_loop:
+        lw      t2, 0(t0)
+        and     t3, t2, t1
+        beqz    t3, wcr_loop            # bit en 0 = apretado -> seguir esperando
         ret
 
 # =====================================================================
