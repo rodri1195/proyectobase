@@ -89,6 +89,7 @@ menu_loop:
         andi    t0, a0, BTN_UP
         beqz    t0, chk_down
         li      s1, 0
+        
         j       menu_delay
 chk_down:
         andi    t0, a0, BTN_DOWN

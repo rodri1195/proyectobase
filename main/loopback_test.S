@@ -37,38 +37,73 @@
 # =====================================================================
 #  test_main: punto de entrada del test. No retorna.
 # =====================================================================
+# test_main:
+#         call    oled_init
+#         call    uart_init
+
+#         li      a0, 0x55
+#         call    uart_tx_byte            # intenta mandar UN byte
+
+# # leer STATUS justo después
+#         li      t0, 0x60010000          # UART1_BASE
+#         lw      t3, 0x001C(t0)          # t3 = STATUS completo
+
+# # TXFIFO_CNT = bits [25:16]
+#         srli    t4, t3, 16
+#         andi    t4, t4, 0x3FF           # t4 = bytes en TX FIFO
+
+# # TXD interno = bit 31
+#         srli    t5, t3, 31              # t5 = nivel de la linea TX interna
+
+# # pantalla LLENA si el FIFO quedo en 0 (byte salio) -> t4==0
+# # pantalla VACIA si el FIFO quedo con el byte atascado -> t4!=0
+#         beqz    t4, dbg_empty_fifo
+# # FIFO NO vacio: byte atascado
+#         call    fb_clear
+#         call    oled_flush
+#         j       dbg_halt
+# dbg_empty_fifo:
+#         call    fb_fill
+#         call    oled_flush
+# dbg_halt:
+#         j       dbg_halt
+
+
+# test_main:
+#         call    oled_init
+#         call    uart_init
+
+# tx_loop:
+#         li      a0, 0x40                # patrón visible en osciloscopio
+#         call    uart_tx_byte
+#         j       tx_loop
+
 test_main:
         call    oled_init
         call    uart_init
 
-        li      a0, 0x55
-        call    uart_tx_byte            # intenta mandar UN byte
-
-# leer STATUS justo después
-        li      t0, 0x60010000          # UART1_BASE
-        lw      t3, 0x001C(t0)          # t3 = STATUS completo
-
-# TXFIFO_CNT = bits [25:16]
-        srli    t4, t3, 16
-        andi    t4, t4, 0x3FF           # t4 = bytes en TX FIFO
-
-# TXD interno = bit 31
-        srli    t5, t3, 31              # t5 = nivel de la linea TX interna
-
-# pantalla LLENA si el FIFO quedo en 0 (byte salio) -> t4==0
-# pantalla VACIA si el FIFO quedo con el byte atascado -> t4!=0
-        beqz    t4, dbg_empty_fifo
-# FIFO NO vacio: byte atascado
         call    fb_clear
         call    oled_flush
-        j       dbg_halt
-dbg_empty_fifo:
-        call    fb_fill
+
+loop:
+        li      a0, 0x4D                # 'M'
+        call    uart_tx_byte
+
+        call    uart_rx_byte            # espera recibir la M por RX
+
+        li      t0, 0x4D
+        bne     a0, t0, fail
+        bnez    a1, fail
+
+        call    fb_fill                 # pantalla llena = RX OK
         call    oled_flush
-dbg_halt:
-        j       dbg_halt
 
+        j       loop                    # vuelve a mandar M
 
+fail:
+        call    fb_clear
+        call    oled_flush
+        j       fail
 # test_main:
 #         addi    sp, sp, -4
 #         sw      ra, 0(sp)
@@ -126,11 +161,11 @@ dbg_halt:
 # tl_halt:
 #         j       tl_halt
 
-# # =====================================================================
-# #  fb_fill: pone los 1024 bytes del framebuffer en 0xFF (pantalla llena).
-# #  Gemelo de fb_clear pero encendiendo todos los pixeles.
-# #  Clobbers: t0, t1, t2 (no llama a nadie -> no toca ra)
-# # =====================================================================
+# =====================================================================
+#  fb_fill: pone los 1024 bytes del framebuffer en 0xFF (pantalla llena).
+#  Gemelo de fb_clear pero encendiendo todos los pixeles.
+#  Clobbers: t0, t1, t2 (no llama a nadie -> no toca ra)
+# =====================================================================
 fb_fill:
         la      t0, framebuffer
         li      t1, 1024
