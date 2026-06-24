@@ -82,6 +82,8 @@ menu_loop:
         mv      a0, s1
         call    menu_draw               # dibuja el cuadro y lo vuelca
 
+        call    menu_poll_online
+
         call    boton_leer              # a0 = botones apretados
         andi    t0, a0, BTN_CONFIRM
         bnez    t0, menu_confirmar
@@ -122,8 +124,34 @@ modo_prueba:
 
 # --- ONLINE: placeholder. Logica desactivada temporalmente. ---
 modo_online:
+        call    online_send_m_wait_k
+        call    online_as_controller
         j       menu_main               # no hace nada por ahora, vuelve al menu
 
+
+menu_poll_online:
+        addi    sp, sp, -4
+        sw      ra, 0(sp)
+
+        call    uart_recv_try           # a0 = byte recibido o -1
+
+        li      t0, 0x4D                # 'M'
+        bne     a0, t0, mpo_ret
+
+# Llegó una M: somos secundaria
+        li      a0, 0x4B                # 'K'
+        call    uart_send_byte
+
+        lw      ra, 0(sp)
+        addi    sp, sp, 4
+
+        call    online_as_follower
+        j       menu_main
+
+mpo_ret:
+        lw      ra, 0(sp)
+        addi    sp, sp, 4
+        ret
 # =====================================================================
 #  botones_setup: GPIO0, GPIO1, GPIO10 como entrada con pull-up
 # =====================================================================

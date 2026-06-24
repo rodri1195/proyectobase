@@ -259,3 +259,32 @@ uart_rx_ready:
         lw      a0, UART_STATUS(t0)
         andi    a0, a0, RXFIFO_CNT_MASK
         ret
+
+
+.global uart_send_byte
+uart_send_byte:
+        j       uart_tx_byte
+
+.global uart_recv_byte
+uart_recv_byte:
+        j       uart_rx_byte
+
+.global uart_recv_try
+uart_recv_try:
+        addi    sp, sp, -4
+        sw      ra, 0(sp)
+
+        call    uart_rx_ready
+        beqz    a0, urt_none
+
+        call    uart_rx_byte
+        j       urt_ret
+
+urt_none:
+        li      a0, -1
+        li      a1, 0
+
+urt_ret:
+        lw      ra, 0(sp)
+        addi    sp, sp, 4
+        ret
