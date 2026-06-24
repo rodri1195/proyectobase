@@ -76,7 +76,7 @@ framebuffer: .space 1024
 # =====================================================================
 menu_main:
         li      s1, 0                   # s1 = seleccion (0=PRUEBA, 1=ONLINE)
-        call    botones_setup
+        call    botones_setup           # configurar GPIO0,1,10 como entrada con pull-up
 
 menu_loop:
         mv      a0, s1
