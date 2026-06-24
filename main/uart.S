@@ -54,7 +54,7 @@
 
 # --- CLKDIV: 40 MHz / 115200 = 347.25 -> int=347, frag=4 ---
 #   baud_real = 40e6 / (347 + 4/16) = 115190.8 bps  (error -0.008%)
-        .equ    CLKDIV_VAL,    ((4 << 20) | 347) # = 0x0040015B
+        .equ    CLKDIV_VAL,    ((6 << 20) | 694) # = 0x0040015B
 
 # --- CLK_CONF: SCLK_SEL=3 (XTAL), DIV_NUM=0 (passthrough), clocks ON ---
 #   SCLK_SEL[21:20]=3, SCLK_EN[22]=1, TX_SCLK_EN[24]=1, RX_SCLK_EN[25]=1
