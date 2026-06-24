@@ -91,45 +91,85 @@
 net_buffer: .space 91
 
 .text
-.global juego_online
 .global handshake
 .global online_controller
 .global online_follower
+.global online_as_follower
+.global online_as_controller
+.global online_send_m_wait_k
 
 # =====================================================================
 #  juego_online: punto de entrada del modo online (lo llama menu.s).
 #  Inicializa UART, setea botones, decide rol y entra al bucle que toque.
 #  Al terminar la partida, vuelve (el menu se redibuja solo).
 # =====================================================================
-juego_online:
+# =====================================================================
+#  DOS PUNTOS DE ENTRADA AL MODO ONLINE
+#
+#  El ROL ya NO se negocia con handshake aqui: lo decide el menu segun
+#  COMO se entro (ver menu.s):
+#    - online_as_follower:   me llego una 'M' por UART estando en el menu.
+#                            El menu YA respondio 'K'. Entro como SEGUIDOR.
+#    - online_as_controller: yo elegi ONLINE en el menu. El menu YA mando
+#                            'M' en loop y recibio 'K'. Entro como CONTROLADOR.
+#
+#  Precondiciones comunes (las cumple el menu antes de llamar):
+#    - uart_init ya corrio (desde app_main).
+#    - botones_setup ya corrio.
+#  Por eso aqui NO se vuelve a inicializar UART ni botones.
+# =====================================================================
+
+# ---- Seguidor: arrastrado por una 'M' ----
+online_as_follower:
+        addi    sp, sp, -4
+        sw      ra, 0(sp)
+# state_init deja a los jugadores en posicion/contadores de arranque.
+# El seguidor NO genera tablero: lo recibe completo en el primer 'F'.
+        call    state_init
+        call    online_follower
+        lw      ra, 0(sp)
+        addi    sp, sp, 4
+        ret
+
+# ---- Controlador: yo elegi ONLINE ----
+online_as_controller:
+        addi    sp, sp, -4
+        sw      ra, 0(sp)
+        call    state_init
+        call    board_generate          # solo el controlador genera el tablero
+        call    online_controller
+        lw      ra, 0(sp)
+        addi    sp, sp, 4
+        ret
+
+# =====================================================================
+#  online_send_m_wait_k: yo seleccione ONLINE. Anuncio mandando 'M' en
+#  loop y escucho (sin bloquear) la 'K' entre cada envio. No retorna
+#  hasta recibir 'K'. Lo llama el menu; al volver, el menu salta a
+#  online_as_controller.
+#
+#  Reusa HS_ACK_POLLS / HS_LISTEN_DELAY (definidos arriba) para el ritmo
+#  de reenvio. Misma logica que la fase de anuncio del viejo handshake,
+#  pero como rutina independiente porque ahora el rol lo decide el menu.
+# =====================================================================
+online_send_m_wait_k:
         addi    sp, sp, -8
         sw      ra, 0(sp)
         sw      s0, 4(sp)
-
-        call    uart_init
-        call    botones_setup
-        call    wait_confirm_release    # consumir el apreton que eligio ONLINE
-
-        call    handshake               # a0 = ROLE_CONTROLLER / ROLE_FOLLOWER
-        mv      s0, a0
-
-# Ambos parten del mismo estado inicial. El tablero generado por el
-# controlador es el que vale; el seguidor NO genera nada porque recibe
-# el tablero completo en el primer frame. Pero ambos llaman state_init
-# para dejar a los jugadores en su posicion/contadores de arranque
-# (el seguidor los necesita para su propia copia de p2_x/p2_y al moverse).
-        call    state_init
-
-        li      t0, ROLE_CONTROLLER
-        beq     s0, t0, jo_ctrl
-# seguidor
-        call    online_follower
-        j       jo_ret
-jo_ctrl:
-        call    board_generate          # solo el controlador genera el tablero
-        call    online_controller
-
-jo_ret:
+omw_announce:
+        li      a0, PROTO_M
+        call    uart_send_byte          # mandar 'M'
+        li      s0, HS_ACK_POLLS
+omw_poll:
+        call    uart_recv_try           # a0 = byte o -1
+        li      t0, PROTO_K
+        beq     a0, t0, omw_done        # llego 'K' -> listo
+        li      a0, HS_LISTEN_DELAY
+        call    delay
+        addi    s0, s0, -1
+        bnez    s0, omw_poll
+        j       omw_announce            # reenviar 'M'
+omw_done:
         lw      ra, 0(sp)
         lw      s0, 4(sp)
         addi    sp, sp, 8

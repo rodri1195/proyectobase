@@ -77,9 +77,11 @@ uart_init:
         li      t0, IO_MUX_GPIO20_REG
         li      t1, 0x1800              # MCU_SEL=1 (GPIO), FUN_DRV=2
         sw      t1, 0(t0)
-# señal U1TXD (9) sale por GPIO20
+# señal U1TXD (9) sale por GPIO20, con OEN_SEL=1 para que el output-enable
+# lo controle GPIO_ENABLE_REG (lo habilitamos abajo con W1TS). Sin OEN_SEL
+# el pin no maneja la salida y queda en 0V.
         li      t0, GPIO_FUNC20_OUT_SEL_REG
-        li      t1, U1_SIGNAL_IDX
+        li      t1, U1_SIGNAL_IDX | GPIO_OUT_OEN_SEL
         sw      t1, 0(t0)
 # habilitar GPIO20 como salida
         li      t0, GPIO_ENABLE_W1TS_REG

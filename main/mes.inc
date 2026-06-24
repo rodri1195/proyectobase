@@ -1,7 +1,7 @@
-// =====================================================================
+// \=====================================================================
 //  mes.inc - constantes compartidas del MES
 //  Se incluye con #include "mes.inc" en los .S (preprocesador de C).
-// =====================================================================
+// \=====================================================================
 
 // ---- Botones: bits en GPIO_IN_REG ----
 #define BTN_UP       0x001   // GPIO0
@@ -45,7 +45,7 @@
 // fijo (CNT_CLK), independiente de la frecuencia de CPU -> todas las
 // consolas miden 150ms identicos.
 //
-// 16.000.000 ticks/s * 0,150 s = 2.400.000 ticks por frame.
+// 16.000.000 ticks/s * 0,150 s \= 2.400.000 ticks por frame.
 #define FRAME_TICKS  2400000
 
 // ---- Registros SYSTIMER (capitulo 10 del TRM) ----
@@ -58,8 +58,8 @@
 #define SYSTIMER_UNIT0_VALUE_LO_REG (SYSTIMER_BASE + 0x0044)
 
 // Bits del registro OP (CONFIRMADOS en Register 10.2 del TRM):
-//   UPDATE      = bit 30: escribir 1 para capturar el valor actual
-//   VALUE_VALID = bit 29: el hardware lo pone en 1 cuando la captura termino
+//   UPDATE      \= bit 30: escribir 1 para capturar el valor actual
+//   VALUE_VALID \= bit 29: el hardware lo pone en 1 cuando la captura termino
 #define SYSTIMER_UNIT0_UPDATE_MASK      (1 << 30)
 #define SYSTIMER_UNIT0_VALUE_VALID_MASK (1 << 29)
 
@@ -70,7 +70,7 @@
 // ---- Registros UART (capitulo 26 del TRM) ----
 // Usamos UART1 para el protocolo online (UART0 es la consola de debug/USB).
 // Bases confirmadas (mapa de perifericos):
-//   UART0 = 0x60000000 ; UART1 = 0x60010000
+//   UART0 \= 0x60000000 ; UART1 \= 0x60010000
 #define UART1_BASE       0x60010000
 
 // Offsets (confirmados en el TRM, cap. 26):
@@ -84,7 +84,7 @@
 #define UART_BAUD_115200  0x7002B6
 
 // Valor de CONF0 para formato 8N1:
-//   bit_num (bits 3:2) = 3 (8 bits) ; parity_en (bit 0) = 0 ; stop (bits 5:4) = 1
+//   bit_num (bits 3:2) \= 3 (8 bits) ; parity_en (bit 0) \= 0 ; stop (bits 5:4) \= 1
 #define UART_CONF0_8N1    0x1C
 
 // Valor de CLK_CONF: SCLK_SEL=1 (APB 80MHz, bits 19:18), SCLK_DIV_NUM=0,
@@ -102,14 +102,19 @@
 // ---- System registers (clock/reset de perifericos, cap. 16) ----
 #define SYSTEM_PERIP_CLK_EN0_REG  0x600C0010
 #define SYSTEM_PERIP_RST_EN0_REG  0x600C0014
-#define SYSTEM_UART1_BIT          (1 << 3)       // bit 3 = UART1
+#define SYSTEM_UART1_BIT          (1 << 3)       // bit 3 \= UART1
 
 // ---- Ruteo de pines UART1 por la matriz GPIO ----
-// Señal U1TXD/U1RXD = indice 9 en la tabla de señales del GPIO matrix.
+// Señal U1TXD/U1RXD \= indice 9 en la tabla de señales del GPIO matrix.
 #define U1_SIGNAL_IDX     9
-// Salida TX: GPIO_FUNC20_OUT_SEL = 0x554 + 4*20
+// Bit OEN_SEL (bit 10) de GPIO_FUNCn_OUT_SEL_CFG: fuerza que el output-enable
+// del pin venga de GPIO_ENABLE_REG[n] (el que seteamos por W1TS) en vez de la
+// señal del periferico. SIN este bit, GPIO20 nunca se habilita como salida y
+// queda en 0V (confirmado: TRM cap.5 y foro Espressif). Se OR-ea con la señal.
+#define GPIO_OUT_OEN_SEL  (1 << 10)
+// Salida TX: GPIO_FUNC20_OUT_SEL \= 0x554 + 4*20
 #define GPIO_FUNC20_OUT_SEL_REG  0x600045A4
-// Entrada RX: GPIO_FUNC9_IN_SEL_CFG = 0x154 + 4*9 (señal 9 = U1RXD)
+// Entrada RX: GPIO_FUNC9_IN_SEL_CFG \= 0x154 + 4*9 (señal 9 \= U1RXD)
 #define GPIO_FUNC9_IN_SEL_REG    0x60004178
 // Valor para IN_SEL: pin 21 (bits 5:0) + bit de ruteo por matriz (bit 7)
 #define GPIO_IN_SEL_GPIO21       (21 | (1 << 7))
@@ -130,6 +135,4 @@
 #define PROTO_B      0x42    // 'B' poner bomba
 #define PROTO_0      0x30    // '0' perdio/empate
 #define PROTO_1      0x31    // '1' gano
-
-
 
