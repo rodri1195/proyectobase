@@ -151,29 +151,57 @@ online_as_controller:
 #  Reusa HS_ACK_POLLS / HS_LISTEN_DELAY (definidos arriba) para el ritmo
 #  de reenvio. Misma logica que la fase de anuncio del viejo handshake,
 #  pero como rutina independiente porque ahora el rol lo decide el menu.
-# =====================================================================
+
 online_send_m_wait_k:
-        addi    sp, sp, -8
+        addi    sp, sp, -4
         sw      ra, 0(sp)
-        sw      s0, 4(sp)
-omw_announce:
+
+# limpiar bytes viejos que hayan quedado en RX
+omw_drain:
+        call    uart_recv_try
+        li      t0, -1
+        bne     a0, t0, omw_drain
+
+# mandar UNA sola M
         li      a0, PROTO_M
-        call    uart_send_byte          # mandar 'M'
-        li      s0, HS_ACK_POLLS
-omw_poll:
-        call    uart_recv_try           # a0 = byte o -1
+        call    uart_send_byte
+
+# esperar K para siempre
+omw_wait_k:
+        call    uart_recv_byte
         li      t0, PROTO_K
-        beq     a0, t0, omw_done        # llego 'K' -> listo
-        li      a0, HS_LISTEN_DELAY
-        call    delay
-        addi    s0, s0, -1
-        bnez    s0, omw_poll
-        j       omw_announce            # reenviar 'M'
-omw_done:
+        bne     a0, t0, omw_wait_k
+
         lw      ra, 0(sp)
-        lw      s0, 4(sp)
-        addi    sp, sp, 8
+        addi    sp, sp, 4
         ret
+
+
+
+# online_send_m_wait_k:
+#         addi    sp, sp, -8
+#         sw      ra, 0(sp)
+#         sw      s0, 4(sp)
+
+
+# omw_announce:
+#         li      a0, PROTO_M
+#         call    uart_send_byte          # mandar 'M'
+#         li      s0, HS_ACK_POLLS
+# omw_poll:
+#         call    uart_recv_try           # a0 = byte o -1
+#         li      t0, PROTO_K
+#         beq     a0, t0, omw_done        # llego 'K' -> listo
+#         li      a0, HS_LISTEN_DELAY
+#         call    delay
+#         addi    s0, s0, -1
+#         bnez    s0, omw_poll
+#         j       omw_announce            # reenviar 'M'
+# omw_done:
+#         lw      ra, 0(sp)
+#         lw      s0, 4(sp)
+#         addi    sp, sp, 8
+#         ret
 
 # =====================================================================
 #  handshake: decide rol por orden de llegada.
