@@ -1,8 +1,6 @@
 # =====================================================================
 #  MES (Mini Entertainment System) - punto de entrada
 
-##
-#  ESP32-C3 + SSD1306 128x64 + 5 pulsadores
 #
 #  Flujo:
 #    1) oled_init  -> configura pines del OLED, resetea e inicializa
@@ -22,8 +20,8 @@
 .text
 .global app_main
 app_main:
-        call    oled_init               # 1) display listo      
-        call    uart_init               # 2) UART1 lista (menu escucha 'M')
-        call    menu_main               # 3) arranca el menu (no retorna)
+        call    oled_init
+        call    uart_init
+        call    menu_main
 hang:
         j       hang

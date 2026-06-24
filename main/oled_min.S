@@ -1,8 +1,3 @@
-##include "soc/spi_mem_reg.h"
-.data
-str_oled_test:
-        .string "OLED Test\n"
-
 .text
 .global oled_test
 .global oled_init
@@ -92,10 +87,6 @@ oled_test:
         sw      ra, 0(sp)
 
         call    oled_init
-
-        la      a0, str_oled_test
-        call    jtag_send
-
         call    oled_draw_checkerboard
 
         lw      ra, 0(sp)

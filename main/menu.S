@@ -11,15 +11,7 @@
 #      invisible). NO tocan el display.
 #    - oled_flush vuelca el framebuffer entero al display de una vez.
 #      El usuario nunca ve estados intermedios -> sin parpadeo ni fantasmas.
-#
-#  Depende de oled_min.s: oled_cmd, oled_data, delay
-#
-#  NOTA: la logica ONLINE esta desactivada temporalmente. La opcion sigue
-#  siendo navegable y se dibuja, pero al confirmar vuelve al menu sin actuar.
 # =====================================================================
-
-
-
 .data
 # ---- Fuente 5x8: cada letra son 5 bytes (columnas verticales) ----
 font_P: .byte   0x7F, 0x09, 0x09, 0x09, 0x0F
@@ -37,6 +29,18 @@ font_I: .byte   0x41, 0x41, 0x7F, 0x41, 0x41
 str_prueba: .word font_P, font_R, font_U, font_E, font_B, font_A, 0
 str_online: .word font_O, font_N, font_L, font_I, font_N, font_E, 0
 
+# ---- Glifos extra para los carteles de fin (GANASTE / PERDISTE) ----
+# Mismo formato 5x8 columna-vertical (bit0 arriba) que la fuente de arriba.
+font_G: .byte   0x3E, 0x41, 0x49, 0x49, 0x7A
+font_S: .byte   0x46, 0x49, 0x49, 0x49, 0x31
+font_T: .byte   0x01, 0x01, 0x7F, 0x01, 0x01
+font_D: .byte   0x7F, 0x41, 0x41, 0x41, 0x3E
+
+        .align  2
+# GANASTE = G A N A S T E ; PERDISTE = P E R D I S T E
+str_ganaste: .word font_G, font_A, font_N, font_A, font_S, font_T, font_E, 0
+str_perdiste: .word font_P, font_E, font_R, font_D, font_I, font_S, font_T, font_E, 0
+
 # ---- El framebuffer: 1024 bytes (8*128). La "pantalla virtual". ----
         .align  4
 framebuffer: .space 1024
@@ -49,6 +53,7 @@ framebuffer: .space 1024
 .global fb_set_pixel
 .global oled_flush
 .global framebuffer
+.global fb_cartel
 
 # ---- Registros de entrada (botones) ----
         .equ    GPIO_IN_REG,  0x6000403C
@@ -70,10 +75,9 @@ framebuffer: .space 1024
         .equ    MENU_DEBOUNCE_DELAY, 50000
 
         .equ    CMD_PAGE_BASE, 0xB0
+# =====================================================================
+#  menu_main: punto de entrada del menu inicial del MES y no retorna.   
 
-# =====================================================================
-#  menu_main: punto de entrada. No retorna.
-# =====================================================================
 menu_main:
         li      s1, 0                   # s1 = seleccion (0=PRUEBA, 1=ONLINE)
         call    botones_setup           # configurar GPIO0,1,10 como entrada con pull-up
@@ -227,6 +231,38 @@ rec_draw:
         lw      ra, 0(sp)
         lw      s0, 4(sp)
         addi    sp, sp, 8
+        ret
+
+# =====================================================================
+#  fb_cartel(a0): pantalla limpia con SOLO el texto de fin, centrado.
+#    a0 != 0 -> "GANASTE"  ;  a0 == 0 -> "PERDISTE"
+#  Limpia el framebuffer, escribe el texto centrado en la pagina 3
+#  (centro vertical de la pantalla de 64 px) y vuelca al display.
+#  Ancho centrado precalculado: GANASTE (7 letras) -> col 43;
+#  PERDISTE (8 letras) -> col 40.
+# =====================================================================
+fb_cartel:
+        addi    sp, sp, -4
+        sw      ra, 0(sp)
+
+        call    fb_clear                # pantalla en blanco
+
+        beqz    a0, fc_perdiste
+# GANASTE
+        li      a0, 3                   # pagina 3 (centro vertical)
+        li      a1, 43                  # columna inicial centrada
+        la      a2, str_ganaste
+        j       fc_draw
+fc_perdiste:
+        li      a0, 3
+        li      a1, 40
+        la      a2, str_perdiste
+fc_draw:
+        call    fb_texto
+        call    oled_flush
+
+        lw      ra, 0(sp)
+        addi    sp, sp, 4
         ret
 
 # =====================================================================

@@ -27,37 +27,7 @@
 #  El seguidor reconstruye board[] y btimer[] desde estos bytes para que
 #  board_draw dibuje el digito del fuego igual que el controlador.
 # =====================================================================
-
-# ---- transporte (uart.s) ----
-.extern uart_send_byte
-.extern uart_recv_byte
-.extern uart_recv_try
-
-# ---- estado / logica reusada (juego.s) ----
-.extern state_init
-.extern board_generate
-.extern boton_leer
-.extern tick_fire
-.extern tick_bombs
-.extern check_death
-.extern board_draw
-.extern p1_try_move
-.extern p1_place_bomb
-.extern systimer_read
-.extern delay
-
-# ---- datos compartidos (juego.s) ----
-.extern board
-.extern btimer
-.extern brange
-.extern bowner
-.extern p1_alive
-.extern p2_x
-.extern p2_y
-.extern p2_maxbombs
-.extern p2_placed
-.extern p2_range
-.extern game_over
+.extern fb_cartel                       # cartel GANASTE/PERDISTE (en menu.s)
 
 .data
         .align  2
@@ -128,7 +98,6 @@ online_as_follower:
 
 # =====================================================================
 #  online_controller: bucle del controlador (juega P1='X').
-#
 #  Orden del frame (extiende el de juego.s a dos jugadores):
 #    1) systimer: marca de inicio del frame (tempo de 150ms)
 #    2) input LOCAL  -> acciones de P1
@@ -194,7 +163,12 @@ oc_send_lose:
         li      a0, PROTO_0
 oc_send_res:
         call    uart_send_byte
-        li      a0, 4000000             # dejar el resultado en pantalla
+# Mostrar el cartel en MI pantalla (controlador = P1 = "vos"):
+#   p1_alive==1 -> GANASTE ; p1_alive==0 -> PERDISTE
+        la      t0, p1_alive
+        lw      a0, 0(t0)               # a0 = 1 (ganaste) / 0 (perdiste)
+        call    fb_cartel
+        li      a0, 4000000             # dejar el cartel en pantalla
         call    delay
 
         lw      ra, 0(sp)
@@ -235,7 +209,23 @@ of_frame_cmd:
         j       of_frame
 
 of_result_cmd:
-        call    uart_recv_byte          # consumir '1'/'0'
+        call    uart_recv_byte          # a0 = '1'/'0' en optica de P1
+# El byte viene en optica del CONTROLADOR (P1). Para el seguidor (P2) hay
+# que INVERTIRLO: el controlador manda '1' si EL gano, lo que significa que
+# el seguidor PERDIO. '0' (P1 perdio/empate) -> el seguidor GANO.
+#   recibido '1' -> fb_cartel(0) = PERDISTE
+#   recibido '0' -> fb_cartel(1) = GANASTE
+        li      t0, PROTO_1
+        bne     a0, t0, ofr_win
+        li      a0, 0                   # P1 gano -> P2 perdio
+        j       ofr_show
+ofr_win:
+        li      a0, 1                   # P1 no gano -> P2 gano
+ofr_show:
+        call    fb_cartel
+        li      a0, 4000000             # dejar el cartel en pantalla
+        call    delay
+
         lw      ra, 0(sp)
         addi    sp, sp, 4
         ret

@@ -17,10 +17,10 @@
 #    5 deteccion de muerte  6 render
 #
 #  Estado por casilla (arrays paralelos de BOARD_CELLS bytes/words):
-#    board\[i\]  : codigo de casilla
-#    btimer\[i\] : frames restantes (bomba o fuego)
-#    brange\[i\] : rango congelado de la bomba en esa casilla
-#    bowner\[i\] : dueno de la bomba (0=P1, 1=P2, -1=ninguno)
+#    board[i]  : codigo de casilla
+#    btimer[i] : frames restantes (bomba o fuego)
+#    brange[i] : rango congelado de la bomba en esa casilla
+#    bowner[i] : dueno de la bomba (0=P1, 1=P2, -1=ninguno)
 # =====================================================================
 
 # .extern botones_setup
@@ -28,6 +28,7 @@
 # .extern fb_clear
 # .extern fb_set_pixel
 # .extern oled_flush
+.extern fb_cartel                       # cartel GANASTE/PERDISTE (en menu.s)
 
 .data
         .align  2
@@ -353,6 +354,16 @@ jl_wait:
         j       jl_frame
 
 jl_gameover:
+# Mostrar cartel de fin segun el resultado de P1 ("vos" = la X):
+#   p1_alive==1 -> P1 sobrevivio (murio P2) -> GANASTE
+#   p1_alive==0 -> P1 murio (solo o empate) -> PERDISTE
+        la      t0, p1_alive
+        lw      a0, 0(t0)               # a0 = 1 (ganaste) / 0 (perdiste)
+        call    fb_cartel
+# mantener el cartel en pantalla un momento antes de volver al menu
+        li      a0, 4000000
+        call    delay
+
         lw      ra, 0(sp)
         lw      s0, 4(sp)
         addi    sp, sp, 8
@@ -658,7 +669,7 @@ tb_proc:
         la      t0, pending_count
         lw      t1, 0(t0)
         bge     s0, t1, tb_done         # i >= count -> fin
-# leer pending_stack\[i\]
+# leer pending_stack[i]
         la      t0, pending_stack
         slli    t2, s0, 2
         add     t0, t0, t2
@@ -1001,7 +1012,7 @@ board_draw:
         sw      ra, 0(sp)
         sw      s0, 4(sp)               # y
         sw      s1, 8(sp)               # x
-        sw      s2, 12(sp)              # \&board
+        sw      s2, 12(sp)              # &board
         sw      s3, 16(sp)              # codigo
 
         call    fb_clear
