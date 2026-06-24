@@ -136,7 +136,6 @@ uart_init:
         sw      t1, UART_CLKDIV(t0)
 
 # ---- 5. Frame 8N1 + reset de las FIFOs ----
-#   Escribimos CONF0 con los bits de RST en 1, luego los bajamos.
         li      t1, CONF0_8N1
         li      t2, (CONF0_RXFIFO_RST | CONF0_TXFIFO_RST)
         or      t2, t1, t2
@@ -144,8 +143,6 @@ uart_init:
         sw      t1, UART_CONF0(t0)      # libera reset, queda 8N1 limpio
 
 # ---- 6. CONF1: thresholds de FIFO ----
-#   RX_FULL_THRHD[8:0]=1  (señaliza con 1 byte; usamos polling de todos modos)
-#   TX_EMPTY_THRHD[17:9]=0
         li      t1, 1
         sw      t1, UART_CONF1(t0)
 
@@ -154,7 +151,6 @@ uart_init:
         sw      t1, UART_INT_CLR(t0)
 
 # ---- 8. Sincronizar config al dominio de reloj del Core ----
-#   UPDATE_CTRL debe estar en 0 antes de poner REG_UPDATE=1.
         li      t1, ID_REG_UPDATE
         sw      t1, UART_ID(t0)
 1:      lw      t1, UART_ID(t0)         # esperar a que HW baje REG_UPDATE
@@ -162,9 +158,10 @@ uart_init:
         and     t1, t1, t2
         bnez    t1, 1b
 
-# ---- 9. GPIO Matrix: rutear TX (GPIO20 <- señal 9) ----
+# ---- 9. GPIO Matrix: rutear TX (GPIO20 <- señal 9), OEN_SEL=0 ----
+#   Con el IO_MUX en func matrix (paso 9b), el periferico maneja el OE.
         li      t0, GPIO_BASE
-        li      t1, TX_OUT_SEL_VAL
+        li      t1, TX_OUT_SEL_VAL      # = 9, OEN_SEL=0
         li      t2, TX_OUT_SEL_OFF
         add     t2, t0, t2
         sw      t1, 0(t2)
@@ -173,15 +170,25 @@ uart_init:
         li      t1, (1 << PIN_TX)
         sw      t1, GPIO_ENABLE_W1TS(t0)
 
+# ---- 9b. IO_MUX del pin TX (GPIO20): MCU_SEL=1 (funcion GPIO matrix) ----
+        .equ    IOMUX_TX_OFF,   (0x0004 + 4 * PIN_TX) # 0x0054
+        .equ    IOMUX_MCU_SEL1, (1 << 12) # MCU_SEL[14:12] = 1
+        li      t0, IOMUX_BASE
+        li      t1, IOMUX_MCU_SEL1
+        li      t2, IOMUX_TX_OFF
+        add     t2, t0, t2
+        sw      t1, 0(t2)
+
 # ---- 10. GPIO Matrix: rutear RX (señal 9 <- GPIO21) ----
+        li      t0, GPIO_BASE
         li      t1, RX_IN_SEL_VAL
         li      t2, RX_IN_SEL_OFF
         add     t2, t0, t2
         sw      t1, 0(t2)
 
-# ---- 11. IO_MUX del pin RX: habilitar input ----
+# ---- 11. IO_MUX del pin RX (GPIO21): MCU_SEL=1 + input enable ----
         li      t0, IOMUX_BASE
-        li      t1, IOMUX_FUN_IE
+        li      t1, (IOMUX_MCU_SEL1 | IOMUX_FUN_IE) # MCU_SEL=1 + FUN_IE
         li      t2, IOMUX_RX_OFF
         add     t2, t0, t2
         sw      t1, 0(t2)

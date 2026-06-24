@@ -20,10 +20,11 @@
 .text
 .global app_main
 app_main:
-        call    test_main               # test de loopback (no retorna)
-        call    oled_init               # 1) display listo
-        call    uart_init               # 2) UART1 lista (menu escucha 'M')
-        call    menu_main               # 3) arranca el menu (no retorna)
+#call    gpio20_blink_test       # 0) test de GPIO20 (no retorna)
+#call    oled_init               # 1) display listo      
+#call    uart_init               # 2) UART1 lista (menu escucha 'M')
+        call    test_main               # 3) test de validacion de uart (no retorna)
+#call    menu_main                      # 3) arranca el menu (no retorna)
 # menu_main no retorna nunca; si por algun motivo lo hiciera,
 # caemos en un lazo seguro para no ejecutar memoria basura.
 hang:
