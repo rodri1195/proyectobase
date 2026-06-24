@@ -6,25 +6,19 @@
 #
 #  ARQUITECTURA DE DOBLE BUFFER:
 #    - framebuffer: 1024 bytes en RAM (8 paginas x 128 columnas).
-#      El byte \[pagina*128 + columna\] es una columna vertical de 8 px.
+#      El byte [pagina*128 + columna] es una columna vertical de 8 px.
 #    - Las rutinas de dibujo escriben en el framebuffer (instantaneo,
 #      invisible). NO tocan el display.
 #    - oled_flush vuelca el framebuffer entero al display de una vez.
 #      El usuario nunca ve estados intermedios -> sin parpadeo ni fantasmas.
 #
 #  Depende de oled_min.s: oled_cmd, oled_data, delay
+#
+#  NOTA: la logica ONLINE esta desactivada temporalmente. La opcion sigue
+#  siendo navegable y se dibuja, pero al confirmar vuelve al menu sin actuar.
 # =====================================================================
 
-.extern oled_cmd
-.extern oled_data
-.extern delay
-.extern juego_prueba
-# --- modo online (online.s) y transporte (uart.s) ---
-.extern online_send_m_wait_k
-.extern online_as_controller
-.extern online_as_follower
-.extern uart_send_byte
-.extern uart_recv_try
+
 
 .data
 # ---- Fuente 5x8: cada letra son 5 bytes (columnas verticales) ----
@@ -71,12 +65,7 @@ framebuffer: .space 1024
         .equ    BTN_RIGHT,   0x200      # GPIO9  -> bit 9
         .equ    BTN_CONFIRM, 0x400      # GPIO10 -> bit 10
 
-# Protocolo online (mismos valores que mes.inc; menu.s no incluye el header)
-        .equ    PROTO_M, 0x4D           # 'M' inicio
-        .equ    PROTO_K, 0x4B           # 'K' ack
-
-# Debounce no bloqueante del menu: ITERS vueltas de DELAY ciclos, chequeando
-# UART en cada una. Total aprox = ITERS*DELAY (antes era un delay de 800000).
+# Debounce del menu: ITERS vueltas de DELAY ciclos.
         .equ    MENU_DEBOUNCE_ITERS, 16
         .equ    MENU_DEBOUNCE_DELAY, 50000
 
@@ -93,11 +82,6 @@ menu_loop:
         mv      a0, s1
         call    menu_draw               # dibuja el cuadro y lo vuelca
 
-# --- escuchar UART: si otro MES manda 'M', nos arrastra como SEGUIDOR ---
-        call    uart_recv_try           # a0 = byte o -1
-        li      t0, PROTO_M
-        beq     a0, t0, menu_arrastrado # llego 'M' -> entrar como jugador 2
-
         call    boton_leer              # a0 = botones apretados
         andi    t0, a0, BTN_CONFIRM
         bnez    t0, menu_confirmar
@@ -111,15 +95,9 @@ chk_down:
         beqz    t0, menu_delay
         li      s1, 1
 
-# Debounce que NO ensordece la escucha: en vez de un delay ciego, damos
-# MENU_DEBOUNCE_ITERS vueltas cortas y en CADA una chequeamos UART. Asi el
-# menu sigue respondiendo a la 'M' mientras "espera" entre lecturas de boton.
 menu_delay:
         li      s2, MENU_DEBOUNCE_ITERS
 md_loop:
-        call    uart_recv_try
-        li      t0, PROTO_M
-        beq     a0, t0, menu_arrastrado
         li      a0, MENU_DEBOUNCE_DELAY
         call    delay
         addi    s2, s2, -1
@@ -130,9 +108,6 @@ md_loop:
 menu_confirmar:
         li      s2, MENU_DEBOUNCE_ITERS
 mc_loop:
-        call    uart_recv_try
-        li      t0, PROTO_M
-        beq     a0, t0, menu_arrastrado # aun aqui, una 'M' tiene prioridad
         li      a0, MENU_DEBOUNCE_DELAY
         call    delay
         addi    s2, s2, -1
@@ -144,18 +119,9 @@ modo_prueba:
         call    juego_prueba            # arranca el modo de prueba
         j       menu_main               # al salir del juego, vuelve al menu
 
-# --- Yo eleg ONLINE: anuncio con 'M' en loop, espero 'K', soy CONTROLADOR ---
+# --- ONLINE: placeholder. Logica desactivada temporalmente. ---
 modo_online:
-        call    online_send_m_wait_k    # manda 'M' en loop hasta recibir 'K'
-        call    online_as_controller    # entra como jugador 1 (controlador)
-        j       menu_main               # al terminar la partida, vuelve al menu
-
-# --- Me llego 'M' estando en el menu: respondo 'K' y soy SEGUIDOR ---
-menu_arrastrado:
-        li      a0, PROTO_K
-        call    uart_send_byte          # ack: confirmo que entro
-        call    online_as_follower      # entra como jugador 2 (seguidor)
-        j       menu_main               # al terminar la partida, vuelve al menu
+        j       menu_main               # no hace nada por ahora, vuelve al menu
 
 # =====================================================================
 #  botones_setup: GPIO0, GPIO1, GPIO10 como entrada con pull-up
@@ -264,7 +230,7 @@ fb_set_pixel:
         slli    t0, t0, 7               # t0 = pagina*128
         add     t0, t0, a0              # t0 = indice = pagina*128 + x
         la      t1, framebuffer
-        add     t1, t1, t0              # t1 = \&framebuffer\[indice\]
+        add     t1, t1, t0              # t1 = &framebuffer[indice]
 
         andi    t2, a1, 7               # t2 = y%8 (bit dentro del byte)
         li      t3, 1

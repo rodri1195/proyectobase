@@ -32,44 +32,44 @@
 
 #include "mes.inc"
 
-# ---- transporte (uart.s) ----
-.extern uart_init
-.extern uart_send_byte
-.extern uart_recv_byte
-.extern uart_recv_try
+# # ---- transporte (uart.s) ----
+# .extern uart_init
+# .extern uart_send_byte
+# .extern uart_recv_byte
+# .extern uart_recv_try
 
-# ---- estado / logica reusada (juego.s) ----
-.extern state_init
-.extern board_generate
-.extern wait_confirm_release
-.extern boton_leer
-.extern botones_setup
-.extern tick_fire
-.extern tick_bombs
-.extern check_death
-.extern board_draw
-.extern p1_try_move
-.extern p1_place_bomb
-.extern delay
+# # ---- estado / logica reusada (juego.s) ----
+# .extern state_init
+# .extern board_generate
+# .extern wait_confirm_release
+# .extern boton_leer
+# .extern botones_setup
+# .extern tick_fire
+# .extern tick_bombs
+# .extern check_death
+# .extern board_draw
+# .extern p1_try_move
+# .extern p1_place_bomb
+# .extern delay
 
-# ---- datos compartidos (juego.s) ----
-.extern board
-.extern btimer
-.extern brange
-.extern bowner
-.extern p1_x
-.extern p1_y
-.extern p1_maxbombs
-.extern p1_placed
-.extern p1_range
-.extern p1_alive
-.extern p2_x
-.extern p2_y
-.extern p2_maxbombs
-.extern p2_placed
-.extern p2_range
-.extern p2_alive
-.extern game_over
+# # ---- datos compartidos (juego.s) ----
+# .extern board
+# .extern btimer
+# .extern brange
+# .extern bowner
+# .extern p1_x
+# .extern p1_y
+# .extern p1_maxbombs
+# .extern p1_placed
+# .extern p1_range
+# .extern p1_alive
+# .extern p2_x
+# .extern p2_y
+# .extern p2_maxbombs
+# .extern p2_placed
+# .extern p2_range
+# .extern p2_alive
+# .extern game_over
 
         .equ    ROLE_CONTROLLER, 0
         .equ    ROLE_FOLLOWER,   1

@@ -20,7 +20,7 @@
 .text
 .global app_main
 app_main:
-        call    gpio20_blink_test       # <-- TEST temporal, no retorna
+        call    test_main               # test de loopback (no retorna)
         call    oled_init               # 1) display listo
         call    uart_init               # 2) UART1 lista (menu escucha 'M')
         call    menu_main               # 3) arranca el menu (no retorna)
