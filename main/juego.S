@@ -23,12 +23,6 @@
 #    bowner\[i\] : dueno de la bomba (0=P1, 1=P2, -1=ninguno)
 # =====================================================================
 
-# .extern botones_setup
-# .extern boton_leer
-# .extern fb_clear
-# .extern fb_set_pixel
-# .extern oled_flush
-
 .data
         .align  2
 board:  .space  BOARD_CELLS             # codigo de cada casilla
