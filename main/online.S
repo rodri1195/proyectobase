@@ -28,37 +28,6 @@
 #  board_draw dibuje el digito del fuego igual que el controlador.
 # =====================================================================
 
-# ---- transporte (uart.s) ----
-.extern uart_send_byte
-.extern uart_recv_byte
-.extern uart_recv_try
-
-# ---- estado / logica reusada (juego.s) ----
-.extern state_init
-.extern board_generate
-.extern boton_leer
-.extern tick_fire
-.extern tick_bombs
-.extern check_death
-.extern board_draw
-.extern p1_try_move
-.extern p1_place_bomb
-.extern systimer_read
-.extern delay
-
-# ---- datos compartidos (juego.s) ----
-.extern board
-.extern btimer
-.extern brange
-.extern bowner
-.extern p1_alive
-.extern p2_x
-.extern p2_y
-.extern p2_maxbombs
-.extern p2_placed
-.extern p2_range
-.extern game_over
-
 .data
         .align  2
 # Buffer de red: 91 bytes del tablero (ASCII). Reutilizado por encode/decode.
@@ -185,15 +154,24 @@ oc_gameover:
 #   P1 vivo -> 'R' '1' ; P1 muerto (perdio/empate) -> 'R' '0'
         li      a0, PROTO_R
         call    uart_send_byte
+        li      a0,PROTO_0
         la      t0, p1_alive
         lw      t1, 0(t0)
-        beqz    t1, oc_send_lose
+        bnez    t1, oc_send_res
+        la      t0,p2_alive
+        lbu     t2, 0(t0)
+        beqz    t2, oc_send_res
         li      a0, PROTO_1
-        j       oc_send_res
-oc_send_lose:
-        li      a0, PROTO_0
+
 oc_send_res:
         call    uart_send_byte
+
+        la      t0,p1_alive
+        lw      a0,0(t0)
+        call    result_draw
+
+
+
         li      a0, 4000000             # dejar el resultado en pantalla
         call    delay
 
@@ -236,8 +214,25 @@ of_frame_cmd:
 
 of_result_cmd:
         call    uart_recv_byte          # consumir '1'/'0'
+        li      t0, PROTO_1
+        beq     a0,t0,of_show_win
+
+of_show_lose:
+        li      a0,0
+        j       of_show_result
+
+of_show_win:
+        li      a0,1
+of_show_result:
+        call    result_draw
+
+        li      a0,4000000
+        call    delay
+
         lw      ra, 0(sp)
-        addi    sp, sp, 4
+        addi    sp,sp, 4
+
+
         ret
 
 # =====================================================================

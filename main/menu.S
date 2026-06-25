@@ -32,7 +32,14 @@ font_O: .byte   0x3E, 0x41, 0x41, 0x41, 0x3E
 font_N: .byte   0x7F, 0x02, 0x0C, 0x10, 0x7F
 font_L: .byte   0x7F, 0x40, 0x40, 0x40, 0x40
 font_I: .byte   0x41, 0x41, 0x7F, 0x41, 0x41
+font_G: .byte   0x3E, 0x41, 0x49, 0x49, 0x7A
+font_S: .byte   0x46, 0x49, 0x49, 0x49, 0x31
+font_T: .byte   0x01, 0x01, 0x7F, 0x01, 0x01
+font_D: .byte   0x7F, 0x41, 0x41, 0x22, 0x1C
 
+
+str_ganaste: .word font_G, font_A, font_N, font_A, font_S, font_T, font_E, 0
+str_perdiste: .word font_P, font_E, font_R, font_D, font_I, font_S, font_T, font_E, 0
         .align  2
 str_prueba: .word font_P, font_R, font_U, font_E, font_B, font_A, 0
 str_online: .word font_O, font_N, font_L, font_I, font_N, font_E, 0
@@ -49,6 +56,7 @@ framebuffer: .space 1024
 .global fb_set_pixel
 .global oled_flush
 .global framebuffer
+.global result_draw
 
 # ---- Registros de entrada (botones) ----
         .equ    GPIO_IN_REG,  0x6000403C
@@ -229,6 +237,36 @@ rec_draw:
         addi    sp, sp, 8
         ret
 
+
+
+result_draw:
+        addi    sp, sp, -8
+        sw      ra, 0(sp)
+        sw      s0, 4(sp)
+        mv      s0, a0
+
+        call    fb_clear
+
+        bnez    s0, rd_ganaste
+rd_perdiste:
+        li      a0, 3
+        li      a1, 40
+        la      a2, str_perdiste
+
+        j       rd_draw
+
+rd_ganaste:
+        li      a0, 3
+        li      a1, 40
+        la      a2, str_ganaste
+rd_draw:
+        call    fb_texto
+        call    oled_flush
+
+        lw      ra, 0(sp)
+        lw      s0, 4(sp)
+        addi    sp, sp, 8
+        ret
 # =====================================================================
 #  fb_clear: pone los 1024 bytes del framebuffer en 0.
 # =====================================================================
